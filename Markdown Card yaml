@@ -1,0 +1,147 @@
+type: markdown
+content: >
+  {% filter trim %} {% set start = states('sensor.fire_restriction_start') %} {%
+  set end = states('sensor.fire_restriction_end') %} {% set muni =
+  states('sensor.fire_municipality') | title %}
+
+  {% set has_start = start not in ['unknown','unavailable','No restrictions'] %}
+  {% set has_end = end not in ['unknown','unavailable','No restrictions'] %} {%
+  if has_start %}{% set start_dt = strptime(start, "%d/%m/%Y") %}{% endif %} {%
+  if has_end %}{% set end_dt = strptime(end, "%d/%m/%Y") %}{% endif %} {% set
+  today = now().date() %}
+
+  {# Always initialise friendly strings #} {% set start_fmt = 'No restrictions'
+  %} {% set end_fmt = 'No restrictions' %}
+
+  {% set days_to_start = has_start and (start_dt.date() - today).days or None %}
+  {% set is_active =
+    (has_start and has_end and (today >= start_dt.date() and today <= end_dt.date())) or
+    (has_start and not has_end and (today >= start_dt.date()))
+  %} {% set has_ended = has_end and today > end_dt.date() %}
+
+  {# Friendly date strings #} {% if has_start %}
+    {% set sd = start_dt.day %}
+    {% set sfx = 'th' %}
+    {% if sd not in [11,12,13] %}
+      {% if sd % 10 == 1 %}{% set sfx = 'st' %}
+      {% elif sd % 10 == 2 %}{% set sfx = 'nd' %}
+      {% elif sd % 10 == 3 %}{% set sfx = 'rd' %}{% endif %}
+    {% endif %}
+    {% set start_fmt = sd|string + sfx + " " + start_dt.strftime("%B %Y") %}
+  {% endif %}
+
+  {% if has_end %}
+    {% set ed = end_dt.day %}
+    {% set esfx = 'th' %}
+    {% if ed not in [11,12,13] %}
+      {% if ed % 10 == 1 %}{% set esfx = 'st' %}
+      {% elif ed % 10 == 2 %}{% set esfx = 'nd' %}
+      {% elif ed % 10 == 3 %}{% set esfx = 'rd' %}{% endif %}
+    {% endif %}
+    {% set end_fmt = ed|string + esfx + " " + end_dt.strftime("%B %Y") %}
+  {% endif %}
+
+  {% if start in ['unknown','unavailable','No restrictions'] and end in
+  ['unknown','unavailable','No restrictions'] %} ## ✅ Fire Restrictions
+
+  No current fire restrictions in {{ muni }} Municipality. Next restriction date
+  is unknown. {% else %}
+    {% if is_active %}
+  ## 🔥 Fire Restrictions
+
+  Restrictions are currently in place for {{ muni }} Municipality. Period: {{
+  start_fmt }}{% if has_end %} → {{ end_fmt }}{% endif %}
+    {% elif has_start and days_to_start == 0 %}
+  ## 🔥 Fire Restrictions
+
+  Restrictions start today in {{ muni }} Municipality. Period: {{ start_fmt }}{%
+  if has_end %} → {{ end_fmt }}{% endif %}
+    {% elif has_ended %}
+  ## ✅ Fire Restrictions
+
+  Restrictions have ended in {{ muni }} Municipality. Last period: {{ start_fmt
+  }} → {{ end_fmt }}
+    {% else %}
+  ## ⏳ Fire Restrictions
+
+  No restrictions currently in {{ muni }} Municipality. They will be commencing
+  soon, on the {{ start_fmt }}.
+
+  {% if days_to_start is not none and days_to_start > 0 and days_to_start <= 21
+  %} <span class="countdown">(in {{ days_to_start }} days)</span> {% endif %}
+    {% endif %}
+  {% endif %}
+
+  {% set td = now().day %} {% set tfx = 'th' %} {% if td not in [11,12,13] %}
+    {% if td % 10 == 1 %}{% set tfx = 'st' %}
+    {% elif td % 10 == 2 %}{% set tfx = 'nd' %}
+    {% elif td % 10 == 3 %}{% set tfx = 'rd' %}{% endif %}
+  {% endif %} {% set today_fmt = td|string + tfx + " " + now().strftime("%B %Y")
+  %}
+
+  --- *Last updated on {{ today_fmt }}* {% endfilter %}
+card_mod:
+  style: >
+    {% set start = states('sensor.fire_restriction_start') %} {% set end =
+    states('sensor.fire_restriction_end') %} {% set has_start = start not in
+    ['unknown','unavailable','No restrictions'] %} {% set has_end = end not in
+    ['unknown','unavailable','No restrictions'] %} {% if has_start %}{% set
+    start_dt = strptime(start, "%d/%m/%Y") %}{% endif %} {% if has_end %}{% set
+    end_dt = strptime(end, "%d/%m/%Y") %}{% endif %} {% set today = now().date()
+    %} {% set days_to_start = has_start and (start_dt.date() - today).days or
+    None %} {% set is_active =
+      (has_start and has_end and (today >= start_dt.date() and today <= end_dt.date())) or
+      (has_start and not has_end and (today >= start_dt.date()))
+    %} {% set has_ended = has_end and today > end_dt.date() %}
+
+    {% if has_ended %}
+      {% set gradient = 'linear-gradient(135deg, #2e7d32, #66bb6a)' %}
+      {% set solid = '#66bb6a' %}
+    {% elif is_active %}
+      {% set gradient = 'linear-gradient(135deg, #b71c1c, #f44336)' %}
+      {% set solid = '#f44336' %}
+    {% elif has_start and days_to_start is not none and days_to_start > 0 and
+    days_to_start <= 15 %}
+      {% set gradient = 'linear-gradient(135deg, #ff9800, #ffc107)' %}
+      {% set solid = '#ffc107' %}
+    {% else %}
+      {% set gradient = 'linear-gradient(135deg, #2e7d32, #66bb6a)' %}
+      {% set solid = '#66bb6a' %}
+    {% endif %}
+
+    ha-card {
+      background-color: {{ solid }};
+      background-image: {{ gradient }};
+      color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    ha-card .card-content, ha-markdown {
+      background: none !important;
+      color: #ffffff !important;
+    }
+
+    .countdown {
+      color: #ffeb3b !important; /* amber for upcoming */
+      font-weight: bold;
+    }
+
+    /* Softer footer */ ha-markdown p:last-of-type em {
+      opacity: 0.4 !important;
+      color: #eeeeee !important;
+      font-size: 0.85em !important;
+      font-style: italic !important;
+      display: block !important;
+      margin-top: 6px !important;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.4em;
+      font-weight: bold;
+    }
+
+    p {
+      font-weight: normal;
+    }
