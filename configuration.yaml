@@ -1,0 +1,51 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+logger:
+  default: info
+  logs:
+    homeassistant.components.command_line: debug
+
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+command_line:
+  - sensor:
+      name: fire restriction start
+      command: "python3 config/scripts/fire_restriction_scraper.py '{{ states('sensor.fire_municipality') }}' start"
+#      scan_interval: 86400
+  - sensor:
+      name: fire restriction end
+      command: "python3 config/scripts/fire_restriction_scraper.py '{{ states('sensor.fire_municipality') }}' end"
+#      scan_interval: 86400
+
+template:
+  - sensor:
+       - name: "Fire Municipality"
+        state: "HEPBURN"
+      - name: "Fire Restriction Status"
+        state: >
+          {% set start = states('sensor.fire_restriction_start') %}
+          {% set end = states('sensor.fire_restriction_end') %}
+          {% if start not in ['unknown','unavailable','No restrictions'] and end not in ['unknown','unavailable','No restrictions'] %}
+            {% set start_dt = strptime(start, "%d/%m/%Y") %}
+            {% set end_dt = strptime(end, "%d/%m/%Y") %}
+            {% if now() >= start_dt and now() <= end_dt %}
+              Fire Restrictions are in place
+            {% else %}
+              No fire restrictions exist at present
+            {% endif %}
+          {% else %}
+            No fire restrictions exist at present
+          {% endif %}
+
+
+
+
