@@ -27,3 +27,9 @@ i am led to believe in some instances you may need to change it by adding the pr
 
 You will work it out !
 Hope it somewhat useful for others - it took me 3 goes over several years and lots of heartache to get here - ENJOY !
+
+The only thing you will need to change is the one line in the configuration.yaml
+      - name: "Fire Municipality"
+        state: "HEPBURN"
+ Change the contents of state to be the name of the municipality you want - use the table at the CFA website https://www.cfa.vic.gov.au/warnings-restrictions/fire-danger-period/fire-restriction-dates for any municipalities listed (its not case sensitive()
+
